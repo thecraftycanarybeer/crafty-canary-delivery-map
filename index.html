@@ -195,6 +195,23 @@
       }
     ).addTo(map);
 
+    // Town/road label overlay — Esri's matching "Reference" layer, made
+    // to sit on top of the Dark Gray base above with light-coloured
+    // labels. Same free, no-key source. Placed in its own pane above
+    // the district polygons so labels stay crisp instead of tinted by
+    // the yellow fill. Delete this block if you'd rather have an
+    // unlabelled map.
+    map.createPane("labelsPane");
+    map.getPane("labelsPane").style.zIndex = 450;
+    map.getPane("labelsPane").style.pointerEvents = "none";
+    L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+      {
+        maxZoom: 16,
+        pane: "labelsPane"
+      }
+    ).addTo(map);
+
     var activeFeatures = districtBoundaries.features.filter(function (f) {
       return deliveryPostcodes.indexOf(f.properties.name) !== -1;
     });
