@@ -144,6 +144,22 @@
   .cc-tooltip::before {
     border-top-color: #ffd100;
   }
+
+  /* Reference labels for notable towns — plain text, no box, so a
+     handful of them don't clutter such a small map. */
+  .cc-town-label {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 0 3px;
+    text-shadow: 0 0 3px #000, 0 0 3px #000, 0 1px 2px #000;
+  }
+  .cc-town-label::before {
+    display: none;
+  }
 </style>
 
 <script>
@@ -158,6 +174,19 @@
   // Brand colours
   var FILL_COLOUR = "#FFD100";
   var BORDER_COLOUR = "#000000";
+
+  // Notable towns to label for reference, so customers can spot their
+  // own town rather than just the postcode code. Add/remove entries
+  // freely — each is just a name and a [lat, lng]. Keep entries that
+  // sit close together (under ~2-3km apart) to just one of them, since
+  // both labels won't fit legibly at this map's zoom/size.
+  var notableTowns = [
+    { name: "Brecon", latlng: [51.9481, -3.3897] },
+    { name: "Sennybridge", latlng: [51.9576, -3.5744] },
+    { name: "Abergavenny", latlng: [51.8236, -3.0177] },
+    { name: "Crickhowell", latlng: [51.8582, -3.1387] },
+    { name: "Aberdare", latlng: [51.7147, -3.4442] }
+  ];
 
   // Trimmed GeoJSON boundaries for Welsh postcode districts, sourced from
   // the open missinglink/uk-postcode-polygons dataset (OS/ONS-derived,
@@ -242,6 +271,28 @@
         });
       }
     }).addTo(map);
+
+    // Small reference markers for notable towns (see notableTowns near
+    // the top). Non-interactive so they never intercept clicks meant
+    // for the district polygons underneath.
+    notableTowns.forEach(function (town) {
+      L.circleMarker(town.latlng, {
+        pane: "labelsPane",
+        radius: 3,
+        color: FILL_COLOUR,
+        weight: 1,
+        fillColor: "#000",
+        fillOpacity: 1,
+        interactive: false
+      })
+        .bindTooltip(town.name, {
+          permanent: true,
+          direction: "right",
+          offset: [5, 0],
+          className: "cc-town-label"
+        })
+        .addTo(map);
+    });
 
     if (activeFeatures.length) {
       var fitToDistricts = function () {
