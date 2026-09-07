@@ -169,7 +169,17 @@
     var map = L.map("cc-delivery-map", {
       zoomControl: true,
       attributionControl: true,
-      scrollWheelZoom: false
+      scrollWheelZoom: false,
+      // Disabling these avoids a Leaflet timing bug where fitBounds()
+      // computes the right view, but the renderer applies it a frame
+      // later (via requestAnimationFrame) — if that frame lands after
+      // our redraw() calls below, some polygons project to huge/wrong
+      // coordinates instead of drawing correctly. Turning animation off
+      // makes every view change apply synchronously, so there's nothing
+      // left to race.
+      zoomAnimation: false,
+      fadeAnimation: false,
+      markerZoomAnimation: false
     }).setView([51.9, -3.3], 9);
 
     // Dark base layer — Esri "World Dark Gray Base". Free, no API key or
@@ -220,18 +230,31 @@
       var fitToDistricts = function () {
         map.invalidateSize();
         map.fitBounds(districtLayer.getBounds(), { padding: [20, 20], animate: false });
-        // Belt-and-braces: some embedding contexts (a CMS section still
-        // settling layout, a widget rendered while its tab/frame is
-        // hidden) can leave polygon paths undrawn even after a correct
-        // fitBounds, so force every path to redraw explicitly too.
+        // Belt-and-braces: a fitBounds computed while the container had
+        // zero size can leave polygon paths stuck at wrong/huge screen
+        // coordinates even after the size is fixed, so force every path
+        // to redraw explicitly too.
         districtLayer.eachLayer(function (layer) {
           if (layer.redraw) layer.redraw();
         });
       };
-      // Fit once immediately, then again next tick once the surrounding
-      // page has finished laying out the container at its real size.
       fitToDistricts();
-      setTimeout(fitToDistricts, 0);
+
+      // If this widget loads inside an iframe (its intended use on the
+      // Shopify site) or any container that starts at zero size before
+      // the surrounding page finishes laying it out, the fit above runs
+      // against a 0-width map and gets the zoom permanently wrong. Watch
+      // the container and re-fit the moment it actually has real size.
+      if (typeof ResizeObserver !== "undefined") {
+        var mapEl = document.getElementById("cc-delivery-map");
+        var ro = new ResizeObserver(function (entries) {
+          if (entries[0].contentRect.width > 0) {
+            fitToDistricts();
+            ro.disconnect();
+          }
+        });
+        ro.observe(mapEl);
+      }
     }
   }
 
